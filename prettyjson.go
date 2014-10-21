@@ -74,6 +74,10 @@ func processMap(m map[string]interface{}, depth int) string {
 	rows := []string{}
 	keys := []string{}
 
+	if len(m) == 0 {
+		return "{}"
+	}
+
 	for key, _ := range m {
 		keys = append(keys, key)
 	}
@@ -95,6 +99,10 @@ func processArray(a []interface{}, depth int) string {
 	currentIndent := generateIndent(depth - 1)
 	nextIndent := generateIndent(depth)
 	rows := []string{}
+
+	if len(a) == 0 {
+		return "[]"
+	}
 
 	for _, val := range a {
 		c := pretty(val, depth+1)
