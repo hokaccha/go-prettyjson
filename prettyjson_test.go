@@ -11,13 +11,13 @@ import (
 func TestMarshalPretty(t *testing.T) {
 	errFormat := "\nexpected:\n%s\n\nactual:\n%s"
 	v := map[string]interface{}{
-		"key": []interface{}{
-			"str",
-			100, 
-			nil,
-			true,
-			false,
-			map[string]string{"key":"str"},
+		"key": map[string]interface{}{
+			"a": "str",
+			"b": 100,
+			"c": nil,
+			"d": true,
+			"e": false,
+			"f": map[string]string{"key": "str"},
 		},
 	}
 	b, err := prettyjson.MarshalPretty(v)
@@ -26,27 +26,36 @@ func TestMarshalPretty(t *testing.T) {
 		t.Error(err)
 	}
 
-	s := string(b)
+	blueBold := color.New(color.FgBlue, color.Bold).SprintFunc()
+	greenBold := color.New(color.FgGreen, color.Bold).SprintFunc()
+	cyanBold := color.New(color.FgCyan, color.Bold).SprintFunc()
+	blackBold := color.New(color.FgBlack, color.Bold).SprintFunc()
+	yelloBold := color.New(color.FgYellow, color.Bold).SprintFunc()
 
-	key := color.New(color.FgBlue, color.Bold).SprintFunc()(`"key"`)
-	str := color.New(color.FgGreen, color.Bold).SprintFunc()(`"str"`)
-	num := color.New(color.FgCyan, color.Bold).SprintFunc()("100")
-	null := color.New(color.FgBlack, color.Bold).SprintFunc()("null")
-	tru := color.New(color.FgYellow, color.Bold).SprintFunc()("true")
-	fal := color.New(color.FgYellow, color.Bold).SprintFunc()("false")
-
-	expected := fmt.Sprintf(`{
-  %s: [
-    %s,
-    %s,
-    %s,
-    %s,
-    %s,
-    {
+	format := `{
+  %s: {
+    %s: %s,
+    %s: %s,
+    %s: %s,
+    %s: %s,
+    %s: %s,
+    %s: {
       %s: %s
     }
-  ]
-}`, key, str, num, null, tru, fal, key, str)
+  }
+}`
+
+	expected := fmt.Sprintf(format,
+		blueBold(`"key"`),
+		blueBold(`"a"`), greenBold(`"str"`),
+		blueBold(`"b"`), cyanBold("100"),
+		blueBold(`"c"`), blackBold("null"),
+		blueBold(`"d"`), yelloBold("true"),
+		blueBold(`"e"`), yelloBold("false"),
+		blueBold(`"f"`), blueBold(`"key"`), greenBold(`"str"`),
+	)
+
+	s := string(b)
 
 	if s != expected {
 		t.Errorf(errFormat, expected, s)

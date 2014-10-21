@@ -3,6 +3,7 @@ package prettyjson
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -71,8 +72,16 @@ func processMap(m map[string]interface{}, depth int) string {
 	currentIndent := generateIndent(depth - 1)
 	nextIndent := generateIndent(depth)
 	rows := []string{}
+	keys := []string{}
 
-	for key, val := range m {
+	for key, _ := range m {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		val := m[key]
 		k := sprintfColor(KeyColor, `"%s"`, key)
 		v := pretty(val, depth+1)
 		row := fmt.Sprintf("%s%s: %s", nextIndent, k, v)
@@ -97,5 +106,5 @@ func processArray(a []interface{}, depth int) string {
 }
 
 func generateIndent(depth int) string {
-	return strings.Join(make([]string, Indent * depth+1), " ")
+	return strings.Join(make([]string, Indent*depth+1), " ")
 }
