@@ -15,6 +15,7 @@ var StringColor = color.New(color.FgGreen, color.Bold)
 var BoolColor = color.New(color.FgYellow, color.Bold)
 var NumberColor = color.New(color.FgCyan, color.Bold)
 var NullColor = color.New(color.FgBlack, color.Bold)
+var StringMaxLength = 0
 var DisabledColor = false
 var Indent = 2
 
@@ -52,7 +53,7 @@ func sprintfColor(c *color.Color, format string, args ...interface{}) string {
 func pretty(v interface{}, depth int) string {
 	switch val := v.(type) {
 	case string:
-		return sprintfColor(StringColor, `"%s"`, val)
+		return processString(val)
 	case float64:
 		return sprintfColor(NumberColor, strconv.FormatFloat(val, 'f', -1, 64))
 	case bool:
@@ -66,6 +67,16 @@ func pretty(v interface{}, depth int) string {
 	}
 
 	return ""
+}
+
+func processString(s string) string {
+	r := []rune(s)
+
+	if StringMaxLength != 0 && len(r) >= StringMaxLength {
+		s = string(r[0:StringMaxLength]) + "..."
+	}
+
+	return sprintfColor(StringColor, `"%s"`, s)
 }
 
 func processMap(m map[string]interface{}, depth int) string {
