@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	v := map[string]interface{}{
 		"str":   "foo",
 		"num":   100,
