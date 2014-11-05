@@ -8,10 +8,6 @@ import (
 )
 
 func main() {
-	prettyjson.Indent = 4
-	prettyjson.KeyColor = color.New(color.FgMagenta)
-	prettyjson.BoolColor = nil
-	prettyjson.NullColor = color.New(color.Underline)
 
 	v := map[string]interface{}{
 		"str":   "foo",
@@ -23,6 +19,11 @@ func main() {
 			"foo": "bar",
 		},
 	}
-	s, _ := prettyjson.MarshalPretty(v)
+	f := prettyjson.NewFormatter()
+	f.Indent = 4
+	f.KeyColor = color.New(color.FgMagenta)
+	f.BoolColor = nil
+	f.NullColor = color.New(color.Underline)
+	s, _ := f.Marshal(v)
 	fmt.Println(string(s))
 }

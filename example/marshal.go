@@ -17,6 +17,6 @@ func main() {
 			"foo": "bar",
 		},
 	}
-	s, _ := prettyjson.MarshalPretty(v)
+	s, _ := prettyjson.Marshal(v)
 	fmt.Println(string(s))
 }

@@ -7,8 +7,6 @@ import (
 )
 
 func main() {
-	prettyjson.DisabledColor = true
-
 	v := map[string]interface{}{
 		"str":   "foo",
 		"num":   100,
@@ -19,6 +17,8 @@ func main() {
 			"foo": "bar",
 		},
 	}
-	s, _ := prettyjson.MarshalPretty(v)
+	f := prettyjson.NewFormatter()
+	f.DisabledColor = true
+	s, _ := f.Marshal(v)
 	fmt.Println(string(s))
 }

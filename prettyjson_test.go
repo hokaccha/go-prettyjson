@@ -10,7 +10,7 @@ import (
 )
 
 
-func TestMarshalPretty(t *testing.T) {
+func TestMarshal(t *testing.T) {
 	prettyJson := func(s string) string {
 		var v interface{}
 
@@ -20,7 +20,7 @@ func TestMarshalPretty(t *testing.T) {
 			t.Error(err)
 		}
 
-		prettyJsonByte, err := prettyjson.MarshalPretty(v)
+		prettyJsonByte, err := prettyjson.Marshal(v)
 
 		if err != nil {
 			t.Error(err)

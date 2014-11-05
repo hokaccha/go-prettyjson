@@ -10,26 +10,41 @@ import (
 	"github.com/fatih/color"
 )
 
-var KeyColor = color.New(color.FgBlue, color.Bold)
-var StringColor = color.New(color.FgGreen, color.Bold)
-var BoolColor = color.New(color.FgYellow, color.Bold)
-var NumberColor = color.New(color.FgCyan, color.Bold)
-var NullColor = color.New(color.FgBlack, color.Bold)
-var StringMaxLength = 0
-var DisabledColor = false
-var Indent = 2
+type Formatter struct {
+	KeyColor        *color.Color
+	StringColor     *color.Color
+	BoolColor       *color.Color
+	NumberColor     *color.Color
+	NullColor       *color.Color
+	StringMaxLength int
+	DisabledColor   bool
+	Indent          int
+}
 
-func MarshalPretty(v interface{}) ([]byte, error) {
+func NewFormatter() *Formatter {
+	return &Formatter{
+		KeyColor:        color.New(color.FgBlue, color.Bold),
+		StringColor:     color.New(color.FgGreen, color.Bold),
+		BoolColor:       color.New(color.FgYellow, color.Bold),
+		NumberColor:     color.New(color.FgCyan, color.Bold),
+		NullColor:       color.New(color.FgBlack, color.Bold),
+		StringMaxLength: 0,
+		DisabledColor:   false,
+		Indent:          2,
+	}
+}
+
+func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
 	data, err := json.Marshal(v)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return Pretty(data)
+	return f.Format(data)
 }
 
-func Pretty(data []byte) ([]byte, error) {
+func (f *Formatter) Format(data []byte) ([]byte, error) {
 	var v interface{}
 	err := json.Unmarshal(data, &v)
 
@@ -37,51 +52,51 @@ func Pretty(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	s := pretty(v, 1)
+	s := f.pretty(v, 1)
 
 	return []byte(s), nil
 }
 
-func sprintfColor(c *color.Color, format string, args ...interface{}) string {
-	if DisabledColor || c == nil {
+func (f *Formatter) sprintfColor(c *color.Color, format string, args ...interface{}) string {
+	if f.DisabledColor || c == nil {
 		return fmt.Sprintf(format, args...)
 	} else {
 		return c.SprintfFunc()(format, args...)
 	}
 }
 
-func pretty(v interface{}, depth int) string {
+func (f *Formatter) pretty(v interface{}, depth int) string {
 	switch val := v.(type) {
 	case string:
-		return processString(val)
+		return f.processString(val)
 	case float64:
-		return sprintfColor(NumberColor, strconv.FormatFloat(val, 'f', -1, 64))
+		return f.sprintfColor(f.NumberColor, strconv.FormatFloat(val, 'f', -1, 64))
 	case bool:
-		return sprintfColor(BoolColor, strconv.FormatBool(val))
+		return f.sprintfColor(f.BoolColor, strconv.FormatBool(val))
 	case nil:
-		return sprintfColor(NullColor, "null")
+		return f.sprintfColor(f.NullColor, "null")
 	case map[string]interface{}:
-		return processMap(val, depth)
+		return f.processMap(val, depth)
 	case []interface{}:
-		return processArray(val, depth)
+		return f.processArray(val, depth)
 	}
 
 	return ""
 }
 
-func processString(s string) string {
+func (f *Formatter) processString(s string) string {
 	r := []rune(s)
 
-	if StringMaxLength != 0 && len(r) >= StringMaxLength {
-		s = string(r[0:StringMaxLength]) + "..."
+	if f.StringMaxLength != 0 && len(r) >= f.StringMaxLength {
+		s = string(r[0:f.StringMaxLength]) + "..."
 	}
 
-	return sprintfColor(StringColor, `"%s"`, s)
+	return f.sprintfColor(f.StringColor, `"%s"`, s)
 }
 
-func processMap(m map[string]interface{}, depth int) string {
-	currentIndent := generateIndent(depth - 1)
-	nextIndent := generateIndent(depth)
+func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
+	currentIndent := f.generateIndent(depth - 1)
+	nextIndent := f.generateIndent(depth)
 	rows := []string{}
 	keys := []string{}
 
@@ -97,8 +112,8 @@ func processMap(m map[string]interface{}, depth int) string {
 
 	for _, key := range keys {
 		val := m[key]
-		k := sprintfColor(KeyColor, `"%s"`, key)
-		v := pretty(val, depth+1)
+		k := f.sprintfColor(f.KeyColor, `"%s"`, key)
+		v := f.pretty(val, depth+1)
 		row := fmt.Sprintf("%s%s: %s", nextIndent, k, v)
 		rows = append(rows, row)
 	}
@@ -106,9 +121,9 @@ func processMap(m map[string]interface{}, depth int) string {
 	return fmt.Sprintf("{\n%s\n%s}", strings.Join(rows, ",\n"), currentIndent)
 }
 
-func processArray(a []interface{}, depth int) string {
-	currentIndent := generateIndent(depth - 1)
-	nextIndent := generateIndent(depth)
+func (f *Formatter) processArray(a []interface{}, depth int) string {
+	currentIndent := f.generateIndent(depth - 1)
+	nextIndent := f.generateIndent(depth)
 	rows := []string{}
 
 	if len(a) == 0 {
@@ -116,7 +131,7 @@ func processArray(a []interface{}, depth int) string {
 	}
 
 	for _, val := range a {
-		c := pretty(val, depth+1)
+		c := f.pretty(val, depth+1)
 		row := nextIndent + c
 		rows = append(rows, row)
 	}
@@ -124,6 +139,10 @@ func processArray(a []interface{}, depth int) string {
 	return fmt.Sprintf("[\n%s\n%s]", strings.Join(rows, ",\n"), currentIndent)
 }
 
-func generateIndent(depth int) string {
-	return strings.Join(make([]string, Indent*depth+1), " ")
+func (f *Formatter) generateIndent(depth int) string {
+	return strings.Join(make([]string, f.Indent*depth+1), " ")
+}
+
+func Marshal(v interface{}) ([]byte, error) {
+	return NewFormatter().Marshal(v)
 }
