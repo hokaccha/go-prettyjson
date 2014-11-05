@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-	f := prettyjson.NewFormatter()
-	s, _ := f.Format([]byte("{\"foo\":\"bar\"}"))
+	s, _ := prettyjson.Format([]byte(`{"foo":"bar"}`))
 	fmt.Println(string(s))
 }

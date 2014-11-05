@@ -146,3 +146,7 @@ func (f *Formatter) generateIndent(depth int) string {
 func Marshal(v interface{}) ([]byte, error) {
 	return NewFormatter().Marshal(v)
 }
+
+func Format(data []byte) ([]byte, error) {
+	return NewFormatter().Format(data)
+}
