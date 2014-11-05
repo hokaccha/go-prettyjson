@@ -21,10 +21,6 @@ fmt.Println(string(s))
 
 ![Output](http://i.imgur.com/cUFj5os.png)
 
-## Todo
-
-* Windows support
-
 ## License
 
 MIT
