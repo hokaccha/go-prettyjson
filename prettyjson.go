@@ -11,7 +11,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// Formatter is a struct to format JSON data.
+// Formatter is a struct to format JSON data. `color` is github.com/fatih/color: https://github.com/fatih/color
 type Formatter struct {
 	// JSON key color. Default is `color.New(color.FgBlue, color.Bold)`.
 	KeyColor *color.Color
