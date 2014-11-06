@@ -1,3 +1,4 @@
+// Package prettyjson provides JSON pretty print.
 package prettyjson
 
 import (
@@ -10,17 +11,34 @@ import (
 	"github.com/fatih/color"
 )
 
+// Formatter is a struct to format JSON data.
 type Formatter struct {
-	KeyColor        *color.Color
-	StringColor     *color.Color
-	BoolColor       *color.Color
-	NumberColor     *color.Color
-	NullColor       *color.Color
+	// JSON key color. Default is `color.New(color.FgBlue, color.Bold)`.
+	KeyColor *color.Color
+
+	// JSON string value color. Default is `color.New(color.FgGreen, color.Bold)`.
+	StringColor *color.Color
+
+	// JSON boolean value color. Default is `color.New(color.FgYellow, color.Bold)`.
+	BoolColor *color.Color
+
+	// JSON number value color. Default is `color.New(color.FgCyan, color.Bold)`.
+	NumberColor *color.Color
+
+	// JSON null value color. Default is `color.New(color.FgBlack, color.Bold)`.
+	NullColor *color.Color
+
+	// Max length of JSON string value. When the value is 1 and over, string is truncated to length of the value. Default is 0 (not truncated).
 	StringMaxLength int
-	DisabledColor   bool
-	Indent          int
+
+	// Boolean to diesable color. Default is false.
+	DisabledColor bool
+
+	// Indent space number. Default is 2.
+	Indent int
 }
 
+// NewFormatter returns a new formatter with following default values.
 func NewFormatter() *Formatter {
 	return &Formatter{
 		KeyColor:        color.New(color.FgBlue, color.Bold),
@@ -34,6 +52,7 @@ func NewFormatter() *Formatter {
 	}
 }
 
+// Marshals and formats JSON data.
 func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
 	data, err := json.Marshal(v)
 
@@ -44,6 +63,7 @@ func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
 	return f.Format(data)
 }
 
+// Formats JSON string.
 func (f *Formatter) Format(data []byte) ([]byte, error) {
 	var v interface{}
 	err := json.Unmarshal(data, &v)
@@ -143,10 +163,12 @@ func (f *Formatter) generateIndent(depth int) string {
 	return strings.Join(make([]string, f.Indent*depth+1), " ")
 }
 
+// Marshal JSON data with default options.
 func Marshal(v interface{}) ([]byte, error) {
 	return NewFormatter().Marshal(v)
 }
 
+// Format JSON string with default options.
 func Format(data []byte) ([]byte, error) {
 	return NewFormatter().Format(data)
 }
