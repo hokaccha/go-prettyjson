@@ -22,6 +22,21 @@ func Example() {
 	}
 	s, _ := prettyjson.Marshal(v)
 	fmt.Println(string(s))
+	// Output:
+	// {
+	//   [34;1m"array"[0m: [
+	//     [32;1m"foo"[0m,
+	//     [32;1m"bar"[0m,
+	//     [32;1m"baz"[0m
+	//   ],
+	//   [34;1m"bool"[0m: [33;1mfalse[0m,
+	//   [34;1m"map"[0m: {
+	//     [34;1m"foo"[0m: [32;1m"bar"[0m
+	//   },
+	//   [34;1m"null"[0m: [30;1mnull[0m,
+	//   [34;1m"num"[0m: [36;1m100[0m,
+	//   [34;1m"str"[0m: [32;1m"foo"[0m
+	// }
 }
 
 func TestMarshal(t *testing.T) {
