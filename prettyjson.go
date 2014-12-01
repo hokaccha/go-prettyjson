@@ -111,7 +111,9 @@ func (f *Formatter) processString(s string) string {
 		s = string(r[0:f.StringMaxLength]) + "..."
 	}
 
-	return f.sprintfColor(f.StringColor, `"%s"`, s)
+	b, _ := json.Marshal(s)
+
+	return f.sprintfColor(f.StringColor, string(b))
 }
 
 func (f *Formatter) processMap(m map[string]interface{}, depth int) string {

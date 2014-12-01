@@ -114,3 +114,22 @@ func TestMarshal(t *testing.T) {
 	test("{}", prettyJson("{}"))
 	test("[]", prettyJson("[]"))
 }
+
+func TestStringEscape(t *testing.T) {
+	f := prettyjson.NewFormatter()
+	f.DisabledColor = true
+	s := `{"foo":"foo\"\nbar"}`
+	r, err := f.Format([]byte(s))
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	expected := `{
+  "foo": "foo\"\nbar"
+}`
+
+	if string(r) != expected {
+		t.Errorf("actual: %s\nexpected: %s", string(r), expected)
+	}
+}
