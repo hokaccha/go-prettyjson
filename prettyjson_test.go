@@ -133,3 +133,47 @@ func TestStringEscape(t *testing.T) {
 		t.Errorf("actual: %s\nexpected: %s", string(r), expected)
 	}
 }
+
+func TestStringPercentEscape(t *testing.T) {
+	f := prettyjson.NewFormatter()
+	s := `{"foo":"foo%2Fbar"}`
+	r, err := f.Format([]byte(s))
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	expectedFormat := `{
+  %s: %s
+}`
+
+	blueBold := color.New(color.FgBlue, color.Bold).SprintFunc()
+	greenBold := color.New(color.FgGreen, color.Bold).SprintFunc()
+
+	expected := fmt.Sprintf(expectedFormat,
+		blueBold(`"foo"`), greenBold(`"foo%2Fbar"`),
+	)
+
+	if string(r) != expected {
+		t.Errorf("actual: %s\nexpected: %s", string(r), expected)
+	}
+}
+
+func TestStringPercentEscape_DisabledColor(t *testing.T) {
+	f := prettyjson.NewFormatter()
+	f.DisabledColor = true
+	s := `{"foo":"foo%2Fbar"}`
+	r, err := f.Format([]byte(s))
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	expected := `{
+  "foo": "foo%2Fbar"
+}`
+
+	if string(r) != expected {
+		t.Errorf("actual: %s\nexpected: %s", string(r), expected)
+	}
+}

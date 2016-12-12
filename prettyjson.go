@@ -85,16 +85,24 @@ func (f *Formatter) sprintfColor(c *color.Color, format string, args ...interfac
 	}
 }
 
+func (f *Formatter) sprintColor(c *color.Color, s string) string {
+	if f.DisabledColor || c == nil {
+		return fmt.Sprint(s)
+	} else {
+		return c.SprintFunc()(s)
+	}
+}
+
 func (f *Formatter) pretty(v interface{}, depth int) string {
 	switch val := v.(type) {
 	case string:
 		return f.processString(val)
 	case float64:
-		return f.sprintfColor(f.NumberColor, strconv.FormatFloat(val, 'f', -1, 64))
+		return f.sprintColor(f.NumberColor, strconv.FormatFloat(val, 'f', -1, 64))
 	case bool:
-		return f.sprintfColor(f.BoolColor, strconv.FormatBool(val))
+		return f.sprintColor(f.BoolColor, strconv.FormatBool(val))
 	case nil:
-		return f.sprintfColor(f.NullColor, "null")
+		return f.sprintColor(f.NullColor, "null")
 	case map[string]interface{}:
 		return f.processMap(val, depth)
 	case []interface{}:
@@ -113,7 +121,7 @@ func (f *Formatter) processString(s string) string {
 
 	b, _ := json.Marshal(s)
 
-	return f.sprintfColor(f.StringColor, string(b))
+	return f.sprintColor(f.StringColor, string(b))
 }
 
 func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
