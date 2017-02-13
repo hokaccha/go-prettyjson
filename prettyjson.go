@@ -31,7 +31,7 @@ type Formatter struct {
 	// Max length of JSON string value. When the value is 1 and over, string is truncated to length of the value. Default is 0 (not truncated).
 	StringMaxLength int
 
-	// Boolean to diesable color. Default is false.
+	// Boolean to disable color. Default is false.
 	DisabledColor bool
 
 	// Indent space number. Default is 2.
