@@ -36,6 +36,9 @@ type Formatter struct {
 
 	// Indent space number. Default is 2.
 	Indent int
+
+	// JsonMarshalFunc is the base json marshal func. Default is json.Marshal
+	JsonMarshalFunc func(v interface{}) ([]byte, error)
 }
 
 // NewFormatter returns a new formatter with following default values.
@@ -49,12 +52,13 @@ func NewFormatter() *Formatter {
 		StringMaxLength: 0,
 		DisabledColor:   false,
 		Indent:          2,
+		JsonMarshalFunc: json.Marshal,
 	}
 }
 
 // Marshals and formats JSON data.
 func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
-	data, err := json.Marshal(v)
+	data, err := f.JsonMarshalFunc(v)
 
 	if err != nil {
 		return nil, err
@@ -119,7 +123,7 @@ func (f *Formatter) processString(s string) string {
 		s = string(r[0:f.StringMaxLength]) + "..."
 	}
 
-	b, _ := json.Marshal(s)
+	b, _ := f.JsonMarshalFunc(s)
 
 	return f.sprintColor(f.StringColor, string(b))
 }

@@ -1,12 +1,13 @@
 package prettyjson_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/fatih/color"
-	"github.com/hokaccha/go-prettyjson"
+	prettyjson "github.com/noahhai/go-prettyjson"
 )
 
 func Example() {
@@ -49,7 +50,9 @@ func TestMarshal(t *testing.T) {
 			t.Error(err)
 		}
 
-		prettyJsonByte, err := prettyjson.Marshal(v)
+		formatter := prettyjson.NewFormatter()
+		formatter.JsonMarshalFunc = JsonMarshalNoHtmlEscape
+		prettyJsonByte, err := formatter.Marshal(v)
 
 		if err != nil {
 			t.Error(err)
@@ -72,7 +75,7 @@ func TestMarshal(t *testing.T) {
 
 	actual := prettyJson(`{
   "key": {
-    "a": "str",
+    "a": "<str>",
     "b": 100,
     "c": null,
     "d": true,
@@ -100,7 +103,7 @@ func TestMarshal(t *testing.T) {
 
 	expected := fmt.Sprintf(expectedFormat,
 		blueBold(`"key"`),
-		blueBold(`"a"`), greenBold(`"str"`),
+		blueBold(`"a"`), greenBold(`"<str>"`),
 		blueBold(`"b"`), cyanBold("100"),
 		blueBold(`"c"`), blackBold("null"),
 		blueBold(`"d"`), yelloBold("true"),
@@ -176,4 +179,20 @@ func TestStringPercentEscape_DisabledColor(t *testing.T) {
 	if string(r) != expected {
 		t.Errorf("actual: %s\nexpected: %s", string(r), expected)
 	}
+}
+
+func JsonMarshalNoHtmlEscape(obj interface{}) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+	// otherwise escapes '<' and '>' which we dont want
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(&obj); err != nil {
+		return nil, err
+	}
+	b := buf.Bytes()
+	if len(b) >= 2 {
+		// chop newline
+		return b[:len(b)-1], nil
+	}
+	return b, nil
 }
