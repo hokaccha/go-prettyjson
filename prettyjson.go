@@ -2,6 +2,7 @@
 package prettyjson
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -116,8 +117,14 @@ func (f *Formatter) processString(s string) string {
 		s = string(r[0:f.StringMaxLength]) + "..."
 	}
 
-	b, _ := json.Marshal(s)
-	return f.sprintColor(f.StringColor, string(b))
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	encoder.Encode(s)
+	s = string(buf.Bytes())
+	s = strings.TrimSuffix(s, "\n")
+
+	return f.sprintColor(f.StringColor, s)
 }
 
 func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
