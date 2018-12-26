@@ -60,6 +60,7 @@ func main() {
 		s, err := prettyjson.Marshal(data)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v", err)
+			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stdout, "%s\n", string(s))
 	}
