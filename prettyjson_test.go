@@ -3,6 +3,7 @@ package prettyjson
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/fatih/color"
@@ -42,7 +43,9 @@ func TestMarshal(t *testing.T) {
 	prettyJSON := func(s string) string {
 		var v interface{}
 
-		err := json.Unmarshal([]byte(s), &v)
+		decoder := json.NewDecoder(strings.NewReader(s))
+		decoder.UseNumber()
+		err := decoder.Decode(&v)
 
 		if err != nil {
 			t.Error(err)
@@ -112,6 +115,11 @@ func TestMarshal(t *testing.T) {
 	test(expected, actual)
 	test("{}", prettyJSON("{}"))
 	test("[]", prettyJSON("[]"))
+
+	test(
+		fmt.Sprintf("{\n  %s: %s\n}", blueBold(`"x"`), cyanBold("123456789123456789123456789")),
+		prettyJSON(`{"x":123456789123456789123456789}`),
+	)
 }
 
 func TestStringEscape(t *testing.T) {
