@@ -3,8 +3,10 @@ package prettyjson
 
 import (
 	"bytes"
+	"container/list"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/c0b/go-ordered-json"
 	"sort"
 	"strconv"
 	"strings"
@@ -60,24 +62,38 @@ func NewFormatter() *Formatter {
 
 // Marshal marshals and formats JSON data.
 func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
+
 	data, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
-
-	return f.Format(data)
+	switch v.(type) {
+	case []interface{}:
+		return f.FormatArray(data)
+	default:
+		return f.Format(data)
+	}
 }
 
 // Format formats JSON string.
 func (f *Formatter) Format(data []byte) ([]byte, error) {
-	var v interface{}
+	var om = ordered.NewOrderedMap()
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
-	if err := decoder.Decode(&v); err != nil {
+	if err := decoder.Decode(om); err != nil {
 		return nil, err
 	}
+	return []byte(f.pretty(om, 1)), nil
+}
 
-	return []byte(f.pretty(v, 1)), nil
+func (f *Formatter) FormatArray(data []byte) ([]byte, error) {
+	var array = make([]ordered.OrderedMap, 0)
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&array); err != nil {
+		return nil, err
+	}
+	return []byte(f.pretty(array, 1)), nil
 }
 
 func (f *Formatter) sprintfColor(c *color.Color, format string, args ...interface{}) string {
@@ -106,12 +122,17 @@ func (f *Formatter) pretty(v interface{}, depth int) string {
 		return f.sprintColor(f.BoolColor, strconv.FormatBool(val))
 	case nil:
 		return f.sprintColor(f.NullColor, "null")
+	case *ordered.OrderedMap:
+		return f.processOrderedMap(val, depth)
+	case *list.List:
+		return f.processList(val, depth)
+	case []ordered.OrderedMap:
+		return f.processOrderedMapArray(val, depth)
 	case map[string]interface{}:
 		return f.processMap(val, depth)
 	case []interface{}:
 		return f.processArray(val, depth)
 	}
-
 	return ""
 }
 
@@ -163,6 +184,37 @@ func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
 	return fmt.Sprintf("{%s%s%s%s}", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
 }
 
+func (f *Formatter) processOrderedMap(m *ordered.OrderedMap, depth int) string {
+	_, notEmpty := m.EntriesIter()()
+	if !notEmpty {
+		return "{}"
+	}
+	currentIndent := f.generateIndent(depth - 1)
+	nextIndent := f.generateIndent(depth)
+	rows := []string{}
+	keys := []string{}
+
+	iter := m.EntriesIter()
+	for {
+		pair, ok := iter()
+		if !ok {
+			break
+		}
+		keys = append(keys, pair.Key)
+		val := pair.Value
+		k := f.sprintfColor(f.KeyColor, `"%s"`, pair.Key)
+		v := f.pretty(val, depth+1)
+
+		valueIndent := " "
+		if f.Newline == "" {
+			valueIndent = ""
+		}
+		row := fmt.Sprintf("%s%s:%s%s", nextIndent, k, valueIndent, v)
+		rows = append(rows, row)
+	}
+	return fmt.Sprintf("{%s%s%s%s}", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
+}
+
 func (f *Formatter) processArray(a []interface{}, depth int) string {
 	if len(a) == 0 {
 		return "[]"
@@ -179,6 +231,41 @@ func (f *Formatter) processArray(a []interface{}, depth int) string {
 	}
 	return fmt.Sprintf("[%s%s%s%s]", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
 }
+
+func (f *Formatter) processList(list *list.List, depth int) string {
+	if list.Len() == 0 {
+		return "[]"
+	}
+
+	currentIndent := f.generateIndent(depth - 1)
+	nextIndent := f.generateIndent(depth)
+	rows := []string{}
+
+	for e := list.Front(); e != nil; e = e.Next() {
+		c := f.pretty(e.Value, depth+1)
+		row := nextIndent + c
+		rows = append(rows, row)
+	}
+	return fmt.Sprintf("[%s%s%s%s]", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
+}
+
+func (f *Formatter) processOrderedMapArray(a []ordered.OrderedMap, depth int) string {
+	if len(a) == 0 {
+		return "[]"
+	}
+
+	currentIndent := f.generateIndent(depth - 1)
+	nextIndent := f.generateIndent(depth)
+	rows := []string{}
+
+	for _, val := range a {
+		c := f.pretty(val, depth+1)
+		row := nextIndent + c
+		rows = append(rows, row)
+	}
+	return fmt.Sprintf("[%s%s%s%s]", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
+}
+
 
 func (f *Formatter) generateIndent(depth int) string {
 	return strings.Repeat(" ", f.Indent*depth)
