@@ -6,7 +6,7 @@ import (
 	"container/list"
 	"encoding/json"
 	"fmt"
-	"gitlab.com/c0b/go-ordered-json"
+	"github.com/singlemusic/go-ordered-json"
 	"reflect"
 	"sort"
 	"strconv"
@@ -69,6 +69,16 @@ func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
 	}
 	rt := reflect.TypeOf(v)
 	switch rt.Kind() {
+	case reflect.Ptr:
+		dereferenced := rt.Elem()
+		switch dereferenced.Kind() {
+		case reflect.Slice:
+			return f.FormatArray(data)
+		case reflect.Array:
+			return f.FormatArray(data)
+		default:
+			return f.Format(data)
+		}
 	case reflect.Slice:
 		return f.FormatArray(data)
 	case reflect.Array:
@@ -126,8 +136,12 @@ func (f *Formatter) pretty(v interface{}, depth int) string {
 	case nil:
 		return f.sprintColor(f.NullColor, "null")
 	case *ordered.OrderedMap:
+		return f.processOrderedMapPtr(val, depth)
+	case ordered.OrderedMap:
 		return f.processOrderedMap(val, depth)
 	case *list.List:
+		return f.processListPtr(val, depth)
+	case list.List:
 		return f.processList(val, depth)
 	case []ordered.OrderedMap:
 		return f.processOrderedMapArray(val, depth)
@@ -187,7 +201,38 @@ func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
 	return fmt.Sprintf("{%s%s%s%s}", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
 }
 
-func (f *Formatter) processOrderedMap(m *ordered.OrderedMap, depth int) string {
+func (f *Formatter) processOrderedMapPtr(m *ordered.OrderedMap, depth int) string {
+	_, notEmpty := m.EntriesIter()()
+	if !notEmpty {
+		return "{}"
+	}
+	currentIndent := f.generateIndent(depth - 1)
+	nextIndent := f.generateIndent(depth)
+	rows := []string{}
+	keys := []string{}
+
+	iter := m.EntriesIter()
+	for {
+		pair, ok := iter()
+		if !ok {
+			break
+		}
+		keys = append(keys, pair.Key)
+		val := pair.Value
+		k := f.sprintfColor(f.KeyColor, `"%s"`, pair.Key)
+		v := f.pretty(val, depth+1)
+
+		valueIndent := " "
+		if f.Newline == "" {
+			valueIndent = ""
+		}
+		row := fmt.Sprintf("%s%s:%s%s", nextIndent, k, valueIndent, v)
+		rows = append(rows, row)
+	}
+	return fmt.Sprintf("{%s%s%s%s}", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
+}
+
+func (f *Formatter) processOrderedMap(m ordered.OrderedMap, depth int) string {
 	_, notEmpty := m.EntriesIter()()
 	if !notEmpty {
 		return "{}"
@@ -235,7 +280,24 @@ func (f *Formatter) processArray(a []interface{}, depth int) string {
 	return fmt.Sprintf("[%s%s%s%s]", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
 }
 
-func (f *Formatter) processList(list *list.List, depth int) string {
+func (f *Formatter) processListPtr(list *list.List, depth int) string {
+	if list.Len() == 0 {
+		return "[]"
+	}
+
+	currentIndent := f.generateIndent(depth - 1)
+	nextIndent := f.generateIndent(depth)
+	rows := []string{}
+
+	for e := list.Front(); e != nil; e = e.Next() {
+		c := f.pretty(e.Value, depth+1)
+		row := nextIndent + c
+		rows = append(rows, row)
+	}
+	return fmt.Sprintf("[%s%s%s%s]", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
+}
+
+func (f *Formatter) processList(list list.List, depth int) string {
 	if list.Len() == 0 {
 		return "[]"
 	}
@@ -268,7 +330,6 @@ func (f *Formatter) processOrderedMapArray(a []ordered.OrderedMap, depth int) st
 	}
 	return fmt.Sprintf("[%s%s%s%s]", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
 }
-
 
 func (f *Formatter) generateIndent(depth int) string {
 	return strings.Repeat(" ", f.Indent*depth)

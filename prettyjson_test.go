@@ -100,7 +100,7 @@ type TestObject struct {
 func TestMarshal_StructKeyOrder(t *testing.T) {
 	f := NewFormatter()
 	output, err := f.Marshal(&TestObject{
-		Id: "1234",
+		Id:              "1234",
 		AnotherProperty: "Foo",
 	})
 	if err != nil {
@@ -111,6 +111,37 @@ func TestMarshal_StructKeyOrder(t *testing.T) {
   %s: %s,
   %s: %s
 }`
+
+	blueBold := color.New(color.FgBlue, color.Bold).SprintFunc()
+	greenBold := color.New(color.FgGreen, color.Bold).SprintFunc()
+
+	expected := fmt.Sprintf(expectedFormat,
+		blueBold(`"Id"`), greenBold(`"1234"`),
+		blueBold(`"AnotherProperty"`), greenBold(`"Foo"`),
+	)
+	if string(output) != expected {
+		t.Errorf("actual: %s\nexpected: %s", string(output), expected)
+	}
+}
+
+func TestMarshal_StructList(t *testing.T) {
+	f := NewFormatter()
+	objects := make([]TestObject, 0)
+	objects = append(objects, TestObject{
+		Id:              "1234",
+		AnotherProperty: "Foo",
+	})
+	output, err := f.Marshal(&objects)
+	if err != nil {
+		t.Errorf("marshal failed: %s", err)
+	}
+
+	expectedFormat := `[
+  {
+    %s: %s,
+    %s: %s
+  }
+]`
 
 	blueBold := color.New(color.FgBlue, color.Bold).SprintFunc()
 	greenBold := color.New(color.FgGreen, color.Bold).SprintFunc()
