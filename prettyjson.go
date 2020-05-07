@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gitlab.com/c0b/go-ordered-json"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -62,13 +63,15 @@ func NewFormatter() *Formatter {
 
 // Marshal marshals and formats JSON data.
 func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
-
 	data, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
-	switch v.(type) {
-	case []interface{}:
+	rt := reflect.TypeOf(v)
+	switch rt.Kind() {
+	case reflect.Slice:
+		return f.FormatArray(data)
+	case reflect.Array:
 		return f.FormatArray(data)
 	default:
 		return f.Format(data)
