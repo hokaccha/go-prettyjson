@@ -1,4 +1,4 @@
-module github.com/singlemusic/go-prettyjson
+module github.com/hokaccha/go-prettyjson
 
 go 1.12
 
