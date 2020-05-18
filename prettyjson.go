@@ -68,23 +68,23 @@ func (f *Formatter) Marshal(v interface{}) ([]byte, error) {
 		return nil, err
 	}
 	rt := reflect.TypeOf(v)
-	switch rt.Kind() {
-	case reflect.Ptr:
-		dereferenced := rt.Elem()
-		switch dereferenced.Kind() {
-		case reflect.Slice:
-			return f.FormatArray(data)
-		case reflect.Array:
-			return f.FormatArray(data)
-		default:
-			return f.Format(data)
-		}
+	kind := rt.Kind()
+	if reflect.Ptr == kind {
+		kind = rt.Elem().Kind()
+	}
+	switch kind {
 	case reflect.Slice:
 		return f.FormatArray(data)
 	case reflect.Array:
 		return f.FormatArray(data)
-	default:
+	case reflect.Struct:
 		return f.Format(data)
+	case reflect.Interface:
+		return f.Format(data)
+	case reflect.Map:
+		return f.Format(data)
+	default:
+		return f.FormatLiteral(data)
 	}
 }
 
@@ -107,6 +107,16 @@ func (f *Formatter) FormatArray(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	return []byte(f.pretty(array, 1)), nil
+}
+
+func (f *Formatter) FormatLiteral(data []byte) ([]byte, error) {
+	var v interface{}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&v); err != nil {
+		return nil, err
+	}
+	return []byte(f.pretty(v, 1)), nil
 }
 
 func (f *Formatter) sprintfColor(c *color.Color, format string, args ...interface{}) string {
