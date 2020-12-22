@@ -120,6 +120,11 @@ func TestMarshal(t *testing.T) {
 		fmt.Sprintf("{\n  %s: %s\n}", blueBold(`"x"`), cyanBold("123456789123456789123456789")),
 		prettyJSON(`{"x":123456789123456789123456789}`),
 	)
+
+	test(
+		fmt.Sprintf("{\n  %s: %s\n}", blueBold(`"foo\"bar\n\r\t<>★"`), cyanBold("1")),
+		prettyJSON(`{"foo\"bar\n\r\t<>★":1}`),
+	)
 }
 
 func TestStringEscape(t *testing.T) {
