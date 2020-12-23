@@ -9,36 +9,6 @@ import (
 	"github.com/fatih/color"
 )
 
-func Example() {
-	v := map[string]interface{}{
-		"str":   "foo",
-		"num":   100,
-		"bool":  false,
-		"null":  nil,
-		"array": []string{"foo", "bar", "baz"},
-		"map": map[string]interface{}{
-			"foo": "bar",
-		},
-	}
-	s, _ := Marshal(v)
-	fmt.Println(string(s))
-	// Output:
-	// {
-	//   [34;1m"array"[0m: [
-	//     [32;1m"foo"[0m,
-	//     [32;1m"bar"[0m,
-	//     [32;1m"baz"[0m
-	//   ],
-	//   [34;1m"bool"[0m: [33;1mfalse[0m,
-	//   [34;1m"map"[0m: {
-	//     [34;1m"foo"[0m: [32;1m"bar"[0m
-	//   },
-	//   [34;1m"null"[0m: [30;1mnull[0m,
-	//   [34;1m"num"[0m: [36;1m100[0m,
-	//   [34;1m"str"[0m: [32;1m"foo"[0m
-	// }
-}
-
 func TestMarshal(t *testing.T) {
 	prettyJSON := func(s string) string {
 		var v interface{}
@@ -125,6 +95,69 @@ func TestMarshal(t *testing.T) {
 		fmt.Sprintf("{\n  %s: %s\n}", blueBold(`"foo\"bar\n\r\t<>★"`), cyanBold("1")),
 		prettyJSON(`{"foo\"bar\n\r\t<>★":1}`),
 	)
+}
+
+type TestObject struct {
+	Id              string
+	AnotherProperty string
+}
+
+func TestMarshal_StructKeyOrder(t *testing.T) {
+	f := NewFormatter()
+	output, err := f.Marshal(&TestObject{
+		Id:              "1234",
+		AnotherProperty: "Foo",
+	})
+	if err != nil {
+		t.Errorf("marshal failed: %s", err)
+	}
+
+	expectedFormat := `{
+  %s: %s,
+  %s: %s
+}`
+
+	blueBold := color.New(color.FgBlue, color.Bold).SprintFunc()
+	greenBold := color.New(color.FgGreen, color.Bold).SprintFunc()
+
+	expected := fmt.Sprintf(expectedFormat,
+		blueBold(`"Id"`), greenBold(`"1234"`),
+		blueBold(`"AnotherProperty"`), greenBold(`"Foo"`),
+	)
+	if string(output) != expected {
+		t.Errorf("actual: %s\nexpected: %s", string(output), expected)
+	}
+}
+
+func TestMarshal_StructList(t *testing.T) {
+	f := NewFormatter()
+	objects := make([]TestObject, 0)
+	objects = append(objects, TestObject{
+		Id:              "1234",
+		AnotherProperty: "Foo",
+	})
+	output, err := f.Marshal(&objects)
+	if err != nil {
+		t.Errorf("marshal failed: %s", err)
+	}
+
+	expectedFormat := `[
+  {
+    %s: %s,
+    %s: %s
+  }
+]`
+
+	blueBold := color.New(color.FgBlue, color.Bold).SprintFunc()
+	greenBold := color.New(color.FgGreen, color.Bold).SprintFunc()
+
+	expected := fmt.Sprintf(expectedFormat,
+		blueBold(`"Id"`), greenBold(`"1234"`),
+		blueBold(`"AnotherProperty"`), greenBold(`"Foo"`),
+	)
+	if string(output) != expected {
+		t.Errorf("actual: %s\nexpected: %s", string(output), expected)
+	}
 }
 
 func TestStringEscape(t *testing.T) {
