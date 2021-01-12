@@ -10,6 +10,9 @@ import (
 )
 
 func Example() {
+	defer func(noColor bool) { color.NoColor = noColor }(color.NoColor)
+	color.NoColor = false
+
 	v := map[string]interface{}{
 		"str":   "foo",
 		"num":   100,
