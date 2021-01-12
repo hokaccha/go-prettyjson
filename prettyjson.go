@@ -41,6 +41,8 @@ type Formatter struct {
 
 	// Newline string. To print without new lines set it to empty string. Default is \n.
 	Newline string
+
+	stringEncoder *stringEncoder
 }
 
 // NewFormatter returns a new formatter with following default values.
@@ -120,15 +122,14 @@ func (f *Formatter) processString(s string) string {
 	if f.StringMaxLength != 0 && len(r) >= f.StringMaxLength {
 		s = string(r[0:f.StringMaxLength]) + "..."
 	}
+	return f.sprintColor(f.StringColor, f.encodeString(s))
+}
 
-	buf := &bytes.Buffer{}
-	encoder := json.NewEncoder(buf)
-	encoder.SetEscapeHTML(false)
-	encoder.Encode(s)
-	s = string(buf.Bytes())
-	s = strings.TrimSuffix(s, "\n")
-
-	return f.sprintColor(f.StringColor, s)
+func (f *Formatter) encodeString(s string) string {
+	if f.stringEncoder == nil {
+		f.stringEncoder = newStringEncoder()
+	}
+	return f.stringEncoder.encode(s)
 }
 
 func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
@@ -149,12 +150,7 @@ func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
 
 	for _, key := range keys {
 		val := m[key]
-		buf := &bytes.Buffer{}
-		encoder := json.NewEncoder(buf)
-		encoder.SetEscapeHTML(false)
-		encoder.Encode(key)
-		s := strings.TrimSuffix(string(buf.Bytes()), "\n")
-		k := f.sprintColor(f.KeyColor, s)
+		k := f.sprintColor(f.KeyColor, f.encodeString(key))
 		v := f.pretty(val, depth+1)
 
 		valueIndent := " "
@@ -197,4 +193,26 @@ func Marshal(v interface{}) ([]byte, error) {
 // Format JSON string with default options.
 func Format(data []byte) ([]byte, error) {
 	return NewFormatter().Format(data)
+}
+
+type stringEncoder struct {
+	buffer  *bytes.Buffer
+	encoder *json.Encoder
+}
+
+func newStringEncoder() *stringEncoder {
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(false)
+	return &stringEncoder{buf, enc}
+}
+
+func (e *stringEncoder) encode(str string) string {
+	e.encoder.Encode(str)
+	bs := e.buffer.Bytes()
+	e.buffer.Reset()
+	if len(bs) > 0 && bs[len(bs)-1] == '\n' {
+		bs = bs[:len(bs)-1]
+	}
+	return string(bs)
 }
