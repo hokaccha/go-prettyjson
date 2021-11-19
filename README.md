@@ -23,6 +23,26 @@ fmt.Println(string(s))
 
 ![Output](http://i.imgur.com/cUFj5os.png)
 
+## CLI(command-line interface)
+
+Install:
+
+```cmd
+go get -u github.com/hokaccha/go-prettyjson
+cd $GOPATH github.com/hokaccha/go-prettyjson/prettyjson
+go install
+```
+
+Using:
+```cmd
+prettyjson -h
+```
+```
+Usage: prettyjson [flags] file1.json file2.json ...
+
+  -h	print help information
+```
+
 ## License
 
 MIT
