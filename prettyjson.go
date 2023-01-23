@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/fatih/color"
 )
@@ -77,14 +76,23 @@ func (f *Formatter) Format(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return []byte(f.pretty(v, 1)), nil
+	buf := newBytesBuffer()
+	f.pretty(buf, v, 1)
+	return buf.Bytes(), nil
 }
 
-func (f *Formatter) sprintfColor(c *color.Color, format string, args ...interface{}) string {
+func (f *Formatter) setColor(buf *bytesBuffer, c *color.Color) {
 	if f.DisabledColor || c == nil {
-		return fmt.Sprintf(format, args...)
+		return
 	}
-	return c.SprintfFunc()(format, args...)
+	c.SetWriter(buf)
+}
+
+func (f *Formatter) unsetColor(buf *bytesBuffer, c *color.Color) {
+	if f.DisabledColor || c == nil {
+		return
+	}
+	c.UnsetWriter(buf)
 }
 
 func (f *Formatter) sprintColor(c *color.Color, s string) string {
@@ -94,99 +102,116 @@ func (f *Formatter) sprintColor(c *color.Color, s string) string {
 	return c.SprintFunc()(s)
 }
 
-func (f *Formatter) pretty(v interface{}, depth int) string {
+func (f *Formatter) pretty(buf *bytesBuffer, v interface{}, depth int) {
 	switch val := v.(type) {
 	case string:
-		return f.processString(val)
+		f.setColor(buf, f.StringColor)
+		f.writeString(buf, val)
+		f.unsetColor(buf, f.StringColor)
 	case float64:
-		return f.sprintColor(f.NumberColor, strconv.FormatFloat(val, 'f', -1, 64))
+		f.setColor(buf, f.NumberColor)
+		buf.writeFloat64(val)
+		f.unsetColor(buf, f.NumberColor)
 	case json.Number:
-		return f.sprintColor(f.NumberColor, string(val))
+		f.setColor(buf, f.NumberColor)
+		buf.WriteString(val.String())
+		f.unsetColor(buf, f.NumberColor)
 	case bool:
-		return f.sprintColor(f.BoolColor, strconv.FormatBool(val))
+		f.setColor(buf, f.BoolColor)
+		if val {
+			buf.WriteString("true")
+		} else {
+			buf.WriteString("false")
+		}
+		f.unsetColor(buf, f.BoolColor)
 	case nil:
-		return f.sprintColor(f.NullColor, "null")
+		f.setColor(buf, f.NullColor)
+		buf.WriteString("null")
+		f.unsetColor(buf, f.NullColor)
 	case map[string]interface{}:
-		return f.processMap(val, depth)
+		f.writeMap(buf, val, depth)
 	case []interface{}:
-		return f.processArray(val, depth)
+		f.writeArray(buf, val, depth)
 	}
-
-	return ""
 }
 
-func (f *Formatter) processString(s string) string {
-	r := []rune(s)
-	if f.StringMaxLength != 0 && len(r) >= f.StringMaxLength {
-		s = string(r[0:f.StringMaxLength]) + "..."
+func (f *Formatter) writeString(buf *bytesBuffer, s string) {
+	if f.StringMaxLength != 0 {
+		if r := []rune(s); len(r) >= f.StringMaxLength {
+			s = string(r[0:f.StringMaxLength]) + "..."
+		}
 	}
-
-	buf := &bytes.Buffer{}
-	encoder := json.NewEncoder(buf)
-	encoder.SetEscapeHTML(false)
-	encoder.Encode(s)
-	s = string(buf.Bytes())
-	s = strings.TrimSuffix(s, "\n")
-
-	return f.sprintColor(f.StringColor, s)
+	buf.writeString(s)
 }
 
-func (f *Formatter) processMap(m map[string]interface{}, depth int) string {
+func (f *Formatter) writeMap(buf *bytesBuffer, m map[string]interface{}, depth int) {
 	if len(m) == 0 {
-		return "{}"
+		buf.WriteString("{}")
+		return
 	}
 
-	currentIndent := f.generateIndent(depth - 1)
-	nextIndent := f.generateIndent(depth)
-	rows := []string{}
-	keys := []string{}
-
+	keys := make([]string, len(m))
+	var i int
 	for key := range m {
-		keys = append(keys, key)
+		keys[i] = key
+		i++
 	}
-
 	sort.Strings(keys)
 
-	for _, key := range keys {
-		val := m[key]
-		buf := &bytes.Buffer{}
-		encoder := json.NewEncoder(buf)
-		encoder.SetEscapeHTML(false)
-		encoder.Encode(key)
-		s := strings.TrimSuffix(string(buf.Bytes()), "\n")
-		k := f.sprintColor(f.KeyColor, s)
-		v := f.pretty(val, depth+1)
-
-		valueIndent := " "
-		if f.Newline == "" {
-			valueIndent = ""
+	buf.WriteByte('{')
+	for i, key := range keys {
+		if i > 0 {
+			buf.WriteByte(',')
 		}
-		row := fmt.Sprintf("%s%s:%s%s", nextIndent, k, valueIndent, v)
-		rows = append(rows, row)
+		buf.WriteString(f.Newline)
+		f.writeIndent(buf, depth)
+		f.setColor(buf, f.KeyColor)
+		buf.writeString(key)
+		f.unsetColor(buf, f.KeyColor)
+		buf.WriteByte(':')
+		if f.Newline != "" {
+			buf.WriteByte(' ')
+		}
+		f.pretty(buf, m[key], depth+1)
 	}
-
-	return fmt.Sprintf("{%s%s%s%s}", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
+	buf.WriteString(f.Newline)
+	f.writeIndent(buf, depth-1)
+	buf.WriteByte('}')
 }
 
-func (f *Formatter) processArray(a []interface{}, depth int) string {
+func (f *Formatter) writeArray(buf *bytesBuffer, a []interface{}, depth int) {
 	if len(a) == 0 {
-		return "[]"
+		buf.WriteString("[]")
+		return
 	}
 
-	currentIndent := f.generateIndent(depth - 1)
-	nextIndent := f.generateIndent(depth)
-	rows := []string{}
-
-	for _, val := range a {
-		c := f.pretty(val, depth+1)
-		row := nextIndent + c
-		rows = append(rows, row)
+	buf.WriteByte('[')
+	for i, val := range a {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(f.Newline)
+		f.writeIndent(buf, depth)
+		f.pretty(buf, val, depth+1)
 	}
-	return fmt.Sprintf("[%s%s%s%s]", f.Newline, strings.Join(rows, ","+f.Newline), f.Newline, currentIndent)
+	buf.WriteString(f.Newline)
+	f.writeIndent(buf, depth-1)
+	buf.WriteByte(']')
 }
 
-func (f *Formatter) generateIndent(depth int) string {
-	return strings.Repeat(" ", f.Indent*depth)
+func (f *Formatter) writeIndent(buf *bytesBuffer, depth int) {
+	const spaces = "                                "
+	if n, l := f.Indent*depth, len(spaces); n <= l {
+		buf.WriteString(spaces[:n])
+	} else {
+		buf.WriteString(spaces)
+		for n -= l; n > 0; n, l = n-l, l*2 {
+			if n < l {
+				l = n
+			}
+			buf.Write(buf.Bytes()[buf.Len()-l:])
+		}
+	}
 }
 
 // Marshal JSON data with default options.
@@ -197,4 +222,27 @@ func Marshal(v interface{}) ([]byte, error) {
 // Format JSON string with default options.
 func Format(data []byte) ([]byte, error) {
 	return NewFormatter().Format(data)
+}
+
+type bytesBuffer struct {
+	bytes.Buffer
+	enc     *json.Encoder
+	scratch [64]byte
+}
+
+func newBytesBuffer() *bytesBuffer {
+	var buf bytesBuffer
+	buf.enc = json.NewEncoder(&buf.Buffer)
+	buf.enc.SetEscapeHTML(false)
+	return &buf
+}
+
+func (buf *bytesBuffer) writeString(str string) {
+	if buf.enc.Encode(str) == nil {
+		buf.Truncate(len(buf.Bytes()) - 1)
+	}
+}
+
+func (buf *bytesBuffer) writeFloat64(f float64) {
+	buf.Write(strconv.AppendFloat(buf.scratch[:0], f, 'f', -1, 64))
 }
